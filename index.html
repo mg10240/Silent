@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f2f2f7" />
+    <meta name="color-scheme" content="light" />
+    <meta
+      name="description"
+      content="셔터음 없이 카메라 영상 프레임으로 문서를 스캔하는 기기 내 처리 PWA"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="silent" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23f2f7ff'/%3E%3Cpath d='M18 24v-6h8M38 18h8v6M46 40v6h-8M26 46h-8v-6' fill='none' stroke='%23007aff' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M24 27h16M24 33h16M24 39h11' stroke='%235e6b7c' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>silent</title>
+  </head>
+  <body>
+    <main class="app-shell" id="app">
+      <section class="scanner" aria-label="문서 스캐너">
+        <video id="camera" class="camera" autoplay muted playsinline aria-hidden="true"></video>
+        <div class="camera-shade" aria-hidden="true"></div>
+
+        <header class="topbar" aria-label="앱 도구 막대">
+          <div class="brand" aria-label="silent">
+            <span class="brand-mark" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
+            </span>
+            <span>silent</span>
+          </div>
+          <div class="top-actions" role="toolbar" aria-label="카메라 도구">
+            <button class="icon-button" id="switchCameraButton" type="button" aria-label="카메라 전환" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8.2 5.5 9.4 3h5.2l1.2 2.5H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3.2Z" />
+                <path d="M15.8 9.3A5 5 0 0 0 7.4 11M8.2 14.7A5 5 0 0 0 16.6 13" />
+                <path d="m6.6 8.7.8 2.3 2.3-.8M17.4 15.3l-.8-2.3-2.3.8" />
+              </svg>
+            </button>
+            <button class="icon-button" id="helpButton" type="button" aria-label="도움말">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M9.8 9a2.3 2.3 0 1 1 3.5 2c-.9.5-1.3.9-1.3 2M12 17h.01" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="status-row" aria-live="polite">
+          <span class="status-pill" id="statusPill">
+            <span class="status-light" aria-hidden="true"></span>
+            <span id="statusText">카메라 대기</span>
+          </span>
+        </div>
+
+        <div class="document-guide" id="documentGuide" aria-hidden="true">
+          <i></i><i></i><i></i><i></i>
+          <div class="scan-line"></div>
+        </div>
+
+        <section class="welcome-panel" id="welcomePanel" aria-labelledby="welcomeTitle">
+          <div class="welcome-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path d="M15 15V9h7M26 9h7v6M33 33v6h-7M22 39h-7v-6" />
+              <path d="M18 20h12M18 25h12M18 30h8" />
+            </svg>
+          </div>
+          <p class="eyebrow">무음 문서 스캐너</p>
+          <h1 id="welcomeTitle">소리 없이 문서 스캔</h1>
+          <p class="welcome-copy">
+            카메라 영상에서 가장 선명한 프레임을 골라 저장합니다. 촬영 내용은 이 기기 안에서만 처리됩니다.
+          </p>
+          <button class="primary-button" id="startButton" type="button">카메라 사용하기</button>
+          <p class="permission-note">마이크와 사진 보관함 권한은 요청하지 않습니다.</p>
+        </section>
+
+        <section class="error-panel" id="errorPanel" aria-live="assertive" hidden>
+          <div class="error-icon" aria-hidden="true">!</div>
+          <h2 id="errorTitle">카메라를 시작할 수 없습니다</h2>
+          <p id="errorMessage">Safari 설정에서 카메라 권한을 허용한 뒤 다시 시도해 주세요.</p>
+          <button class="secondary-button" id="retryButton" type="button">다시 시도</button>
+        </section>
+
+        <div class="camera-meta" id="cameraMeta" hidden>
+          <span id="resolutionText">—</span>
+          <span aria-hidden="true">·</span>
+          <span>기기 내 처리</span>
+        </div>
+
+        <footer class="capture-bar" id="captureBar" hidden>
+          <div class="capture-hint" id="captureHint">문서를 프레임 안에 맞춰 주세요</div>
+          <button class="shutter" id="captureButton" type="button" aria-label="문서 스캔">
+            <span></span>
+          </button>
+          <div class="silent-badge" aria-label="무음 프레임 캡처">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11 6 7.8 9H5v6h2.8l3.2 3V6Z" />
+              <path d="m16 10 4 4M20 10l-4 4" />
+            </svg>
+            무음
+          </div>
+        </footer>
+      </section>
+
+      <section class="review" id="reviewPanel" aria-labelledby="reviewTitle" hidden>
+        <header class="review-header">
+          <button class="text-button" id="retakeButton" type="button">재촬영</button>
+          <h2 id="reviewTitle">미리보기</h2>
+          <button class="text-button accent" id="saveButton" type="button">저장</button>
+        </header>
+        <div class="review-stage">
+          <img id="previewImage" alt="스캔한 문서 미리보기" />
+        </div>
+        <div class="review-info">
+          <div>
+            <span>선택한 프레임</span>
+            <strong id="reviewResolution">—</strong>
+          </div>
+          <p>공유 메뉴에서 ‘이미지 저장’을 선택하면 사진 앱에 보관할 수 있습니다.</p>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="help-dialog" id="helpDialog" aria-labelledby="helpTitle">
+      <div class="dialog-head">
+        <button class="sheet-close-button" id="closeHelpButton" type="button">닫기</button>
+        <h2 id="helpTitle">무음 촬영 안내</h2>
+        <span class="dialog-toolbar-spacer" aria-hidden="true"></span>
+      </div>
+      <h3 class="dialog-title">왜 소리가 나지 않나요?</h3>
+      <p>
+        silent는 iPhone의 정지사진 촬영 기능을 호출하지 않습니다. 이미 재생 중인 카메라 영상에서 여러 프레임을
+        비교하고 가장 선명한 한 장을 복사합니다.
+      </p>
+      <ul>
+        <li>마이크와 사진 보관함 권한을 요청하지 않습니다.</li>
+        <li>스캔 이미지를 서버에 업로드하지 않습니다.</li>
+        <li>카메라 사용 중에는 iOS의 녹색 개인정보 표시가 나타납니다.</li>
+      </ul>
+      <div class="dialog-tip">
+        <strong>더 또렷하게 찍으려면</strong>
+        문서와 휴대폰을 평행하게 두고, 그림자가 생기지 않는 밝은 곳에서 촬영하세요.
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <canvas id="captureCanvas" hidden></canvas>
+    <canvas id="analysisCanvas" width="240" height="180" hidden></canvas>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
